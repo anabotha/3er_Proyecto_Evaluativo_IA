@@ -1,12 +1,4 @@
-"""
-Frozen Lake - Value Iteration
-==============================
-Punto 1, Parte A: Método basado en modelo
 
-El agente aprende una política óptima usando Value Iteration,
-sin necesidad de explorar el entorno con prueba y error.
-Usa directamente la dinámica del entorno: env.P[s][a]
-"""
 
 import gymnasium as gym
 import numpy as np
@@ -24,7 +16,6 @@ def value_iteration(env, gamma=0.99, theta=1e-8):
     while True:
         delta = 0  # registra el cambio máximo en esta iteración
 
-        # PASO 2: Recorrer todos los estados
         for s in range(n_states):
 
             
@@ -77,10 +68,7 @@ def value_iteration(env, gamma=0.99, theta=1e-8):
 
 
 def evaluar_politica(env, policy, n_episodios=1000):
-    """
-    Ejecuta n_episodios usando la política dada y
-    devuelve el porcentaje de éxito (llegar a la meta).
-    """
+
     exitos = 0
 
     for _ in range(n_episodios):
@@ -88,11 +76,11 @@ def evaluar_politica(env, policy, n_episodios=1000):
         done = False
 
         while not done:
-            accion = policy[estado]                    # seguir la política
+            accion = policy[estado]                   
             estado, reward, terminated, truncated, _ = env.step(accion)
             done = terminated or truncated
 
-        if reward == 1.0:   # recompensa 1.0 = llegó a la meta
+        if reward == 1.0:   
             exitos += 1
 
     tasa_exito = exitos / n_episodios * 100
@@ -100,11 +88,9 @@ def evaluar_politica(env, policy, n_episodios=1000):
 
 
 def mostrar_politica(policy, V):
-    """Imprime la política y los valores en forma de grilla 4x4."""
     # Mapeo de acción a símbolo: 0=←  1=↓  2=→  3=↑
     simbolos = {0: "←", 1: "↓", 2: "→", 3: "↑"}
 
-    # Posiciones de agujeros y meta en Frozen Lake estándar
     agujeros = {5, 7, 11, 12}
     meta     = {15}
 
@@ -122,7 +108,7 @@ def mostrar_politica(policy, V):
         print(simbolo, end="")
 
         if (s + 1) % 4 == 0:
-            print()  # salto de línea cada 4 estados
+            print() 
 
     print("\n── Función de valor V(s) ──")
     for s in range(16):
