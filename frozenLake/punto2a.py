@@ -1,8 +1,4 @@
 
-#   is_rainy=False  →  determinístico (prob=1.0 en dirección elegida)
-#   is_rainy=True   →  estocástico    (prob=0.8 dirección elegida,
-
-
 import gymnasium as gym
 import numpy as np
 import matplotlib.pyplot as plt
@@ -11,9 +7,8 @@ import matplotlib.gridspec as gridspec
 SIMBOLOS_ACCION = {0: "↓", 1: "↑", 2: "→", 3: "←", 4: "P", 5: "D"}
 NOMBRES_ACCION  = ["Sur", "Norte", "Este", "Oeste", "Recoger", "Dejar"]
 
-
 def value_iteration(env, gamma=0.99, theta=1e-8):
-  
+
     n_states  = env.observation_space.n   # 500
     n_actions = env.action_space.n        # 6
 
@@ -96,8 +91,6 @@ def q_learning(env, n_episodes=10_000, alpha=0.1, gamma=0.99,
 
     return Q, np.argmax(Q, axis=1), recompensas
 
-
-
 def evaluar_politica(env, policy, n_episodios=1000):
     recompensas, pasos_lista = [], []
     for _ in range(n_episodios):
@@ -122,6 +115,7 @@ def evaluar_politica(env, policy, n_episodios=1000):
     }
 
 
+
 def mostrar_politica_ejemplo(env_wrapped, policy, titulo="Política", n_pasos=20):
    
     env_vis = gym.make("Taxi-v4", render_mode="ansi",
@@ -140,7 +134,8 @@ def mostrar_politica_ejemplo(env_wrapped, policy, titulo="Política", n_pasos=20
     for paso in range(n_pasos):
         fila, col, pas, dest = env_vis.unwrapped.decode(estado)
         accion = int(policy[estado])
-        env_vis.render()     
+        frame = env_vis.render()
+        lineas = [l for l in frame.strip().split("\n") if l.strip()]
         siguiente, reward, terminated, truncated, _ = env_vis.step(accion)
         recompensa_total += reward
         print(f"  Paso {paso+1:>2} | estado={estado:>3} ({fila},{col},p={pas},d={dest})"
@@ -148,6 +143,7 @@ def mostrar_politica_ejemplo(env_wrapped, policy, titulo="Política", n_pasos=20
               f" | reward={reward:>4} | r_acum={recompensa_total:>4}")
         estado = siguiente
         if terminated or truncated:
+            fila2, col2, pas2, dest2 = env_vis.unwrapped.decode(estado)
             print(f"  {'─'*46}")
             print(f"  ✓ Episodio terminado en {paso+1} pasos | r_total={recompensa_total}")
             break
@@ -155,7 +151,6 @@ def mostrar_politica_ejemplo(env_wrapped, policy, titulo="Política", n_pasos=20
 
 
 def mostrar_qtable_resumen(Q, top_n=10):
-    """Muestra los top_n estados con mayor valor máximo en la Q-table."""
     max_q = np.max(Q, axis=1)
     top_estados = np.argsort(max_q)[::-1][:top_n]
     print(f"\n  Top {top_n} estados por valor Q máximo:")
@@ -169,6 +164,7 @@ def mostrar_qtable_resumen(Q, top_n=10):
         print(f"  {s:>7} | ({fila},{col},{pas},{dest}){' ':>5} | "
               f"{NOMBRES_ACCION[mejor_a]:>14} | {max_q[s]:>7.2f}")
     env_tmp.close()
+
 
 def graficar_todo(recomp_det, recomp_esto,
                   deltas_vi_det, deltas_vi_esto,
@@ -188,8 +184,7 @@ def graficar_todo(recomp_det, recomp_esto,
 
     ventana = 300
 
-    # ── Fila 0: DETERMINÍSTICO ─────────────────────────
-    # 0-0  Recompensa por episodio
+    
     ax = fig.add_subplot(gs[0, 0])
     ax.plot(recomp_det, alpha=0.2, color=AZUL, linewidth=0.5)
     mm = np.convolve(recomp_det, np.ones(ventana)/ventana, mode="valid")
@@ -200,7 +195,6 @@ def graficar_todo(recomp_det, recomp_esto,
     ax.set_xlabel("Episodio"); ax.set_ylabel("Recompensa")
     ax.legend(fontsize=7); ax.grid(True, alpha=0.3)
 
-    # 0-1  Convergencia VI determinístico
     ax = fig.add_subplot(gs[0, 1])
     ax.semilogy(deltas_vi_det, color=VERDE, linewidth=1.5)
     ax.axhline(1e-8, color=ROJO, linestyle="--", linewidth=1, label="θ=1e-8")
@@ -208,7 +202,6 @@ def graficar_todo(recomp_det, recomp_esto,
     ax.set_xlabel("Iteración"); ax.set_ylabel("Delta (escala log)")
     ax.legend(fontsize=7); ax.grid(True, alpha=0.3)
 
-    # 0-2  Distribución Q-table det (max Q por estado)
     ax = fig.add_subplot(gs[0, 2])
     max_q_det = np.max(Q_det, axis=1)
     ax.hist(max_q_det[max_q_det != 0], bins=40, color=AZUL, edgecolor="white", alpha=0.85)
@@ -216,12 +209,10 @@ def graficar_todo(recomp_det, recomp_esto,
     ax.set_xlabel("Valor Q máximo"); ax.set_ylabel("Frecuencia")
     ax.grid(True, alpha=0.3)
 
-    # 0-3  Comparación VI vs QL (determinístico)
     ax = fig.add_subplot(gs[0, 3])
     _plot_comparacion(ax, vi_det, ql_det, VERDE, AZUL, "Determinístico")
 
-    # ── Fila 1: ESTOCÁSTICO ────────────────────────────
-    # 1-0  Recompensa por episodio
+    
     ax = fig.add_subplot(gs[1, 0])
     ax.plot(recomp_esto, alpha=0.2, color=ROJO, linewidth=0.5)
     mm2 = np.convolve(recomp_esto, np.ones(ventana)/ventana, mode="valid")
@@ -232,17 +223,14 @@ def graficar_todo(recomp_det, recomp_esto,
     ax.set_xlabel("Episodio"); ax.set_ylabel("Recompensa")
     ax.legend(fontsize=7); ax.grid(True, alpha=0.3)
 
-    # 1-1  Convergencia VI estocástico
     ax = fig.add_subplot(gs[1, 1])
     ax.semilogy(deltas_vi_esto, color=ROJO, linewidth=1.5)
     ax.axhline(1e-8, color=ROJO, linestyle="--", linewidth=1, label="θ=1e-8")
-    # Comparar curvas en mismo eje
     ax.semilogy(deltas_vi_det, color=VERDE, linewidth=1, alpha=0.6, label="Det (ref)")
     ax.set_title("VI Estocástico\nConvergencia vs Determinístico")
     ax.set_xlabel("Iteración"); ax.set_ylabel("Delta (escala log)")
     ax.legend(fontsize=7); ax.grid(True, alpha=0.3)
 
-    # 1-2  Distribución Q-table esto
     ax = fig.add_subplot(gs[1, 2])
     max_q_esto = np.max(Q_esto, axis=1)
     ax.hist(max_q_esto[max_q_esto != 0], bins=40, color=ROJO, edgecolor="white", alpha=0.85)
@@ -250,7 +238,6 @@ def graficar_todo(recomp_det, recomp_esto,
     ax.set_xlabel("Valor Q máximo"); ax.set_ylabel("Frecuencia")
     ax.grid(True, alpha=0.3)
 
-    # 1-3  Comparación VI vs QL (estocástico)
     ax = fig.add_subplot(gs[1, 3])
     _plot_comparacion(ax, vi_esto, ql_esto, VERDE, ROJO, "Estocástico")
 
@@ -281,6 +268,143 @@ def _plot_comparacion(ax, vi_stats, ql_stats, c_vi, c_ql, titulo):
     ax.grid(True, axis="y", alpha=0.3)
 
 
+def imprimir_analisis_estadistico(vi_det, vi_esto, ql_det, ql_esto,
+                                   deltas_det, deltas_esto,
+                                   Q_det, Q_esto,
+                                   recomp_det, recomp_esto):
+
+    sep  = "═" * 62
+    sep2 = "─" * 62
+
+    print(f"\n{sep}")
+    print("  ANÁLISIS ESTADÍSTICO COMPLETO")
+    print(sep)
+
+    #  Recompensa de evaluación con 1000 episodios
+    print("\n  [1] RECOMPENSA EN EVALUACIÓN (1 000 episodios)")
+    print(f"  {sep2}")
+    print(f"  {'Métrica':<22} {'DET-VI':>9} {'DET-QL':>9} {'ESTO-VI':>9} {'ESTO-QL':>9}")
+    print(f"  {sep2}")
+
+    for label, key in [
+        ("Media",           "media_recompensa"),
+        ("Desvío estándar", "std_recompensa"),
+        ("Pasos medios",    "media_pasos"),
+        ("% Éxito",         "exito_pct"),
+    ]:
+        print(f"  {label:<22}"
+              f" {vi_det[key]:>9.2f}"
+              f" {ql_det[key]:>9.2f}"
+              f" {vi_esto[key]:>9.2f}"
+              f" {ql_esto[key]:>9.2f}")
+
+    # Percentiles y min/max desde las listas de recompensas
+    for stats in [vi_det, ql_det, vi_esto, ql_esto]:
+        r = np.array(stats["recompensas"])
+        stats["_min"] = float(np.min(r))
+        stats["_max"] = float(np.max(r))
+        stats["_p25"] = float(np.percentile(r, 25))
+        stats["_p50"] = float(np.percentile(r, 50))
+        stats["_p75"] = float(np.percentile(r, 75))
+
+    for label, key in [
+        ("Mínimo",          "_min"),
+        ("Máximo",          "_max"),
+        ("Percentil 25",    "_p25"),
+        ("Mediana (P50)",   "_p50"),
+        ("Percentil 75",    "_p75"),
+    ]:
+        print(f"  {label:<22}"
+              f" {vi_det[key]:>9.2f}"
+              f" {ql_det[key]:>9.2f}"
+              f" {vi_esto[key]:>9.2f}"
+              f" {ql_esto[key]:>9.2f}")
+
+    print(f"  {sep2}")
+    print(f"  {'Caída DET→ESTO (VI)':<22} {vi_det['media_recompensa'] - vi_esto['media_recompensa']:>+9.2f}")
+    print(f"  {'Caída DET→ESTO (QL)':<22} {ql_det['media_recompensa'] - ql_esto['media_recompensa']:>+9.2f}")
+
+    print(f"\n  [2] CONVERGENCIA VALUE ITERATION")
+    print(f"  {sep2}")
+    print(f"  {'Métrica':<30} {'DET':>10} {'ESTO':>10}")
+    print(f"  {sep2}")
+
+    d_det  = np.array(deltas_det)
+    d_esto = np.array(deltas_esto)
+
+    datos_vi = [
+        ("Iteraciones totales",
+             len(d_det),                             len(d_esto)),
+        ("Delta inicial",
+             float(d_det[0]),                        float(d_esto[0])),
+        ("Delta final",
+             float(d_det[-1]),                       float(d_esto[-1])),
+        ("Delta máximo",
+             float(np.max(d_det)),                   float(np.max(d_esto))),
+        ("Media de deltas",
+             float(np.mean(d_det)),                  float(np.mean(d_esto))),
+    ]
+    for label, v_det, v_esto in datos_vi:
+        if isinstance(v_det, float):
+            print(f"  {label:<30} {v_det:>10.4e} {v_esto:>10.4e}")
+        else:
+            print(f"  {label:<30} {v_det:>10} {v_esto:>10}")
+
+    print(f"\n  [3] ESTADÍSTICAS Q-TABLE (500 × 6)")
+    print(f"  {sep2}")
+    print(f"  {'Métrica':<30} {'DET':>10} {'ESTO':>10}")
+    print(f"  {sep2}")
+
+    mq_det  = np.max(Q_det,  axis=1)
+    mq_esto = np.max(Q_esto, axis=1)
+    nz_det  = mq_det[mq_det   != 0]
+    nz_esto = mq_esto[mq_esto != 0]
+
+    datos_q = [
+        ("Estados con Q > 0",           len(nz_det),            len(nz_esto)),
+        ("Estados con Q = 0",           500 - len(nz_det),      500 - len(nz_esto)),
+        ("Media max Q (no nulos)",       float(np.mean(nz_det)), float(np.mean(nz_esto))),
+        ("Desvío max Q (no nulos)",      float(np.std(nz_det)),  float(np.std(nz_esto))),
+        ("Mínimo max Q (no nulos)",      float(np.min(nz_det)),  float(np.min(nz_esto))),
+        ("Máximo max Q",                 float(np.max(mq_det)),  float(np.max(mq_esto))),
+        ("Mediana max Q (no nulos)",     float(np.median(nz_det)), float(np.median(nz_esto))),
+    ]
+    for label, v_det, v_esto in datos_q:
+        if isinstance(v_det, float):
+            print(f"  {label:<30} {v_det:>10.3f} {v_esto:>10.3f}")
+        else:
+            print(f"  {label:<30} {v_det:>10} {v_esto:>10}")
+
+    # Entrenamiento QL
+    print(f"\n  [4] ENTRENAMIENTO Q-LEARNING (10 000 episodios)")
+    print(f"  {sep2}")
+    print(f"  {'Métrica':<30} {'DET':>10} {'ESTO':>10}")
+    print(f"  {sep2}")
+
+    ventana = 300
+    mm_det  = np.convolve(recomp_det,  np.ones(ventana)/ventana, mode="valid")
+    mm_esto = np.convolve(recomp_esto, np.ones(ventana)/ventana, mode="valid")
+
+    ep_supera_0_det  = int(np.argmax(mm_det  > 0)) + ventana - 1 if np.any(mm_det  > 0) else -1
+    ep_supera_0_esto = int(np.argmax(mm_esto > 0)) + ventana - 1 if np.any(mm_esto > 0) else -1
+
+    datos_ql = [
+        ("Media recomp. entrenamiento",  float(np.mean(recomp_det)),  float(np.mean(recomp_esto))),
+        ("Desvío recomp. entrenamiento", float(np.std(recomp_det)),   float(np.std(recomp_esto))),
+        ("Mín recomp. entrenamiento",    float(np.min(recomp_det)),   float(np.min(recomp_esto))),
+        ("Máx recomp. entrenamiento",    float(np.max(recomp_det)),   float(np.max(recomp_esto))),
+        ("Media móvil final (ult 300)",  float(mm_det[-1]),           float(mm_esto[-1])),
+        ("Ep. donde MM supera 0",        ep_supera_0_det,             ep_supera_0_esto),
+    ]
+    for label, v_det, v_esto in datos_ql:
+        if isinstance(v_det, float):
+            print(f"  {label:<30} {v_det:>10.2f} {v_esto:>10.2f}")
+        else:
+            print(f"  {label:<30} {v_det:>10} {v_esto:>10}")
+
+    print(f"\n{sep}\n")
+
+
 def correr_experimento(is_rainy, n_ql=10_000, n_eval=1000):
     nombre = "ESTOCÁSTICO (is_rainy=True)" if is_rainy else "DETERMINÍSTICO (is_rainy=False)"
     print(f"\n{'='*55}")
@@ -299,7 +423,6 @@ def correr_experimento(is_rainy, n_ql=10_000, n_eval=1000):
     print(f"  R.media={vi_stats['media_recompensa']:.2f}±{vi_stats['std_recompensa']:.2f}"
           f"  pasos={vi_stats['media_pasos']:.1f}  éxito={vi_stats['exito_pct']:.1f}%")
 
-    # Mostrar paso a paso de un episodio con política VI
     mostrar_politica_ejemplo(env, policy_vi,
                              titulo=f"Política VI – {nombre}")
 
@@ -324,15 +447,14 @@ if __name__ == "__main__":
     print("  Determinístico  vs  Estocástico (is_rainy)")
     print("=" * 55)
 
-    #  Determinístico 
+    # Determinístico 
     (V_det, pol_vi_det, deltas_det,
      vi_det, Q_det, pol_ql_det, recomp_det, ql_det) = correr_experimento(is_rainy=False)
 
-    #  Estocástico
+    #  Estocástico 
     (V_esto, pol_vi_esto, deltas_esto,
      vi_esto, Q_esto, pol_ql_esto, recomp_esto, ql_esto) = correr_experimento(is_rainy=True)
 
-    #  Comparación final ─
     print(f"\n{'='*60}")
     print("  COMPARACIÓN FINAL")
     print(f"{'='*60}")
@@ -350,7 +472,13 @@ if __name__ == "__main__":
           f" {len(deltas_det):>8}  {'—':>8}"
           f" {len(deltas_esto):>9}  {'—':>8}")
 
-    #  Gráficas 
+    imprimir_analisis_estadistico(
+        vi_det, vi_esto, ql_det, ql_esto,
+        deltas_det, deltas_esto,
+        Q_det, Q_esto,
+        recomp_det, recomp_esto
+    )
+
     print("\n[Graficando...]")
     graficar_todo(recomp_det, recomp_esto,
                   deltas_det, deltas_esto,
