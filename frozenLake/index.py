@@ -130,7 +130,59 @@ def mostrar_politica(policy, V):
         if (s + 1) % 4 == 0:
             print()
 
-
+def q_learning(env, episodes=10000, alpha=0.1, gamma=0.99, epsilon=1.0, epsilon_decay=0.999):
+    """
+    Implementa el algoritmo Q-Learning.
+    """
+    # 1. Inicializar la tabla Q con ceros
+    n_states = env.observation_space.n
+    n_actions = env.action_space.n
+    Q = np.zeros((n_states, n_actions))
+    
+    # Lista para guardar las recompensas y luego graficarlas
+    rewards = []
+    
+    for episode in range(episodes):
+        # Reiniciar el entorno
+        state, info = env.reset()
+        done = False
+        total_reward = 0
+        
+        while not done:
+            # 2. Aplicar estrategia epsilon-greedy
+            if np.random.uniform(0, 1) < epsilon:
+                action = env.action_space.sample() # Exploración (acción aleatoria) 
+            else:
+                action = np.argmax(Q[state, :])    # Explotación (mejor acción conocida) 
+            
+            # Dar un paso en el entorno
+            next_state, reward, terminated, truncated, info = env.step(action)
+            done = terminated or truncated
+            
+            # 3. Actualizar Q mediante la ecuación de aprendizaje (Ecuación de Bellman) 
+            # Si el episodio terminó, el valor futuro esperado es 0
+            best_next_value = np.max(Q[next_state, :]) if not done else 0.0
+            
+            # Ecuación de actualización
+            td_target = reward + gamma * best_next_value
+            td_error = td_target - Q[state, action]
+            Q[state, action] = Q[state, action] + alpha * td_error
+            
+            # Actualizar el estado actual y sumar recompensa
+            state = next_state
+            total_reward += reward
+            
+        # Decaimiento de epsilon al final de cada episodio (con un límite mínimo) 
+        epsilon = max(0.01, epsilon * epsilon_decay)
+        
+        # Guardar la recompensa del episodio
+        rewards.append(total_reward)
+        
+    # Obtener la política derivada de Q (la mejor acción para cada estado)
+    policy = np.argmax(Q, axis=1)
+    
+    # Retorna Q, policy, y rewards
+    return Q, policy, rewards
 
 def correr_experimento(modo_slippery, n_episodios=1000):
    
@@ -173,3 +225,27 @@ if __name__ == "__main__":
     print(f"  Determinístico : {tasa_det:.1f}% de éxito")
     print(f"  Estocástico    : {tasa_esto:.1f}% de éxito")
     print(f"\n  Diferencia     : {tasa_det - tasa_esto:.1f} puntos porcentuales")
+
+    '''
+    Q-Learning
+    q_learning(env,
+        episodes=10000, 
+        alpha=0.1, 
+        gamma=0.99, 
+        epsilon=1.0, 
+        epsilon_decay=0.999)
+    '''
+    # Modo Determinístico 
+    print("Entrenando en modo determinístico...")
+    env_deterministico = gym.make("FrozenLake-v1", is_slippery=False)
+
+    # Le pasamos el juego a la función
+    Q_det, policy_det, rewards_det = q_learning(env_deterministico)
+
+
+    # Modo Estocástico
+    print("Entrenando en modo estocástico...")
+    env_estocastico = gym.make("FrozenLake-v1", is_slippery=True)
+
+    # Le pasamos el nuevo juego a la función 
+    Q_est, policy_est, rewards_est = q_learning(env_estocastico)
